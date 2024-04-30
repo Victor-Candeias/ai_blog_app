@@ -32,7 +32,7 @@ ASSEMBLY_AI_KEY = os.getenv('ASSEMBLY_AI_KEY')
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-npz#p9wi8^)bm1us444$bl4+2!8&(2qn$v4a@&u4^60(0v(^*i'
+SECRET_KEY = os.getenv('APP_SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
