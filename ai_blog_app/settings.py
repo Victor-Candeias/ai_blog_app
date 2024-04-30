@@ -13,9 +13,20 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 
+# importing necessary functions from dotenv library
+from dotenv import load_dotenv, dotenv_values 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# loading variables from .env file
+load_dotenv() 
+
+# Open AI Key
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+# Assembly AI Key
+ASSEMBLY_AI_KEY = os.getenv('ASSEMBLY_AI_KEY')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -86,8 +97,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'USER': 'blogadmin',
-        'PASSWORD': 'bichocao',
+        'USER': os.getenv('DATABASE_USERNAME'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '5432'
     }

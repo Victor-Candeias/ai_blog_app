@@ -98,17 +98,6 @@ def generate_blog(request):
         except (KeyError, json.JSONDecodeError):
             return JsonResponse({'Error': 'Invalid request sent'}, status=400)  
         
-        # get yt title
-        # title = yt_title(yt_link)
-
-        # logger.debug("generate_blog():title=" + title)
-        # write_log('generate_blog()', 'title=' + title)
-
-        # get transcript
-        # transcription = get_transcript(yt_link)
-        # if not transcription:
-        #     return JsonResponse({'Error': 'Failed to get transcript'}, status=500)
-
         # use OpenAI to generate the blog
         blog_content = generate_blog_from_transcription(yt_link)
         if not blog_content:
@@ -160,7 +149,10 @@ def get_transcript(link):
     logger.debug("get_transcript():audio_file=" + audio_file)
     write_log('get_transcript()', 'audio_file=' + audio_file) 
     
-    aai.settings.api_key = "053e732c73ef4ff395ad46b360aaaa50"
+    logger.debug("get_transcript():settings.ASSEMBLY_AI_KEY=" + settings.ASSEMBLY_AI_KEY)
+    write_log('get_transcript()', 'settings.ASSEMBLY_AI_KEY=' + settings.ASSEMBLY_AI_KEY) 
+    
+    aai.settings.api_key = settings.ASSEMBLY_AI_KEY
     
     logger.debug("get_transcript():aai.settings.api_key=" + aai.settings.api_key)
     write_log('get_transcript()', 'aai.settings.api_key=' + aai.settings.api_key) 
@@ -182,9 +174,7 @@ def get_transcript(link):
 # ***************************************************************************
 # Generate blog text using OpenAI
 def generate_blog_from_transcription(transcription):
-    OPENAI_API_KEY = "sk-proj-DAkkm3gYflEIi2D1rt7mT3BlbkFJvLJRSpbPiTUlYAWLRoo6"
-    
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     logger.debug("generate_blog_from_transcription():transcript.text=" + client.api_key)
     write_log('generate_blog_from_transcription()', 'transcript.text=' + client.api_key)
