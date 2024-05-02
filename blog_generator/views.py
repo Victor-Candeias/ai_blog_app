@@ -12,6 +12,8 @@ import assemblyai as aai
 from openai import OpenAI
 import structlog
 import datetime
+import sys
+from .models import BlogPost, TranscribePost
 
 # Start logger
 logger = structlog.get_logger()
@@ -35,12 +37,12 @@ def transcriber(request):
 @csrf_exempt
 # Transcriber page function - create the transcriber
 def transcriber_blog(request):
-    logger.debug("transcriver():request.method=" + request.method)
-    logger.debug("transcriver():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
-    logger.debug("transcriver():settings.MEDIA_LOG=" + settings.LOG)
-    write_log('transcriver()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('transcriver()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('transcriver()', 'settings.LOG=' + settings.LOG)
+    # logger.debug("transcriber():request.method=" + request.method)
+    # logger.debug("transcriber():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
+    # logger.debug("transcriber():settings.MEDIA_LOG=" + settings.LOG)
+    write_log('transcriber_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
+    write_log('transcriber_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
+    write_log('transcriber_blog()', 'settings.LOG=' + settings.LOG)
                     
     # if the method is POST
     if request.method == 'POST':
@@ -54,19 +56,32 @@ def transcriber_blog(request):
             yt_link = data['link']                   
 
         except (KeyError, json.JSONDecodeError):
+            write_log('transcriber_blog()', '1.KeyError.LOG=' + sys.exc_info()[1])
             return JsonResponse({'Error': 'Invalid request sent'}, status=400)  
         
         # get yt title
         title = yt_title(yt_link)
 
-        logger.debug("generate_blog():title=" + title)
-        write_log('generate_blog()', 'title=' + title)
+        # logger.debug("transcriber_blog():title=" + title)
+        write_log('transcriber_blog()', 'title=' + title)
 
         # get transcript
         transcription = get_transcript(yt_link)
         if not transcription:
+            write_log('transcriber_blog()', 'transcription does not exist')
             return JsonResponse({'Error': 'Failed to get transcript'}, status=500)
 
+        # save blog article to database
+        new_transcribe_article = TranscribePost.objects.create(
+            user=request.user,
+            youtube_title=title,
+            youtube_link=yt_link,
+            generated_content=transcription,
+        )
+        new_transcribe_article.save()
+        
+        # return blog article as response
+        write_log('transcriber_blog()', 'transcription=' + transcription)
         return JsonResponse({'content': transcription}, status=200)
     else:
         return JsonResponse({'Error': 'Invalid request method'}, status=405)
@@ -77,9 +92,9 @@ def transcriber_blog(request):
 # Generate blog information from a input user text and using OpenAI
 def generate_blog(request):
     
-    logger.debug("generate_blog():request.method=" + request.method)
-    logger.debug("generate_blog():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
-    logger.debug("generate_blog():settings.MEDIA_LOG=" + settings.LOG)
+    # logger.debug("generate_blog():request.method=" + request.method)
+    # logger.debug("generate_blog():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
+    # logger.debug("generate_blog():settings.MEDIA_LOG=" + settings.LOG)
     write_log('generate_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
     write_log('generate_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
     write_log('generate_blog()', 'settings.LOG=' + settings.LOG)
@@ -96,17 +111,29 @@ def generate_blog(request):
             yt_link = data['link']                   
 
         except (KeyError, json.JSONDecodeError):
+            write_log('generate_blog()', '1.KeyError.LOG=' + sys.exc_info()[1])
             return JsonResponse({'Error': 'Invalid request sent'}, status=400)  
+
+        # get yt title
+        title = yt_title(yt_link)
         
         # use OpenAI to generate the blog
         blog_content = generate_blog_from_transcription(yt_link)
         if not blog_content:
+            write_log('generate_blog()', 'blog_content does not exist')
             return JsonResponse({'Error': 'Failed to generate blog article'}, status=500)
         
         # save blog article to database
-
+        new_blog_article = BlogPost.objects.create(
+            user=request.user,
+            youtube_title=title,
+            youtube_link=yt_link,
+            generated_content=blog_content,
+        )
+        new_blog_article.save()
+        
         # return blog article as response
-        # return JsonResponse({'content': blog_content})
+        write_log('generate_blog()', 'blog_content' + blog_content)
         return JsonResponse({'content': blog_content}, status=200)
     else:
         return JsonResponse({'Error': 'Invalid request method'}, status=405)
@@ -185,7 +212,7 @@ def generate_blog_from_transcription(transcription):
     write_log('generate_blog_from_transcription()', 'prompt=' + prompt)
         
     # "text-davinci-003"
-    response = client.completions.create(model="gpt-3.5-turbo-instruct", 
+    response = client.completions.create(model="davinci-002", 
                                       prompt = prompt, 
                                       max_tokens = 100)
     
@@ -259,6 +286,27 @@ def user_logout(request):
     logout(request)
     # redirect to home page
     return redirect('/')
+
+# ***************************************************************************
+# Show transcriber list
+def transcriber_list(request):
+    trancriber_articles = TranscribePost.objects.filter(user=request.user)
+    
+    return render(request,'all-transcribe.html', {'trancriber_articles': trancriber_articles})
+
+def all_blogs(request):
+    return render(request,'all-blogs.html')
+
+def blog_details(request):
+    return render(request,'blog-details.html')
+
+def transcribe_details(request, pk):
+    trancrive_article_details = TranscribePost.objects.get(id=pk)
+    
+    if request.user == trancrive_article_details.user:
+        return render(request,'transcribe-details.html', {'trancrive_article_details': trancrive_article_details})
+    else:
+        return redirect('/')
 
 # ***************************************************************************
 # Log to file method
