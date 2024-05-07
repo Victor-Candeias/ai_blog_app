@@ -29,6 +29,7 @@ def index(request):
 
 # ***************************************************************************
 # Transcriber page function
+@login_required
 def transcriber(request):
     return render(request, 'transcriber.html')
 
@@ -294,12 +295,25 @@ def transcriber_list(request):
     
     return render(request,'all-transcribe.html', {'trancriber_articles': trancriber_articles})
 
+# ***************************************************************************
+# Show blog list
 def all_blogs(request):
-    return render(request,'all-blogs.html')
+    blog_articles = BlogPost.objects.filter(user=request.user)
+    
+    return render(request,'all-blogs.html', {'blog_articles': blog_articles})
 
-def blog_details(request):
-    return render(request,'blog-details.html')
+# ***************************************************************************
+# Show blog list details
+def blog_details(request, pk):
+    blog_article_details = TranscribePost.objects.get(id=pk)
+    
+    if request.user == blog_article_details.user:
+        return render(request,'blog-details.html', {'blog_article_details': blog_article_details})
+    else:
+        return redirect('/')
 
+# ***************************************************************************
+# Show transcribe list details
 def transcribe_details(request, pk):
     trancrive_article_details = TranscribePost.objects.get(id=pk)
     

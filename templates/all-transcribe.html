@@ -29,10 +29,15 @@
         <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
             <!-- Blog post section -->
             <section>
-                <h2 class="text-xl mb-4 font-semibold">All Transcribe Posts</h2>
+                <h2 class="text-xl mb-4 font-semibold">
+                    {% if trancriber_articles.count == 0 %}
+                        No Transcribe Post Yet
+                    {% else %}
+                        All Transcribe Posts
+                    {% endif %}
+                </h2>
                 <div class="space-y-4">
                     {% for article in trancriber_articles reversed %}
-
                         <a href="transcribe-details/{{article.id}}">
                             <div class="border border-gray-300 p-4 rounded-lg">
                                 <h3 class="text-lg font-semibold">{{article.youtube_title}}</h3>

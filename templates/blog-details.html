@@ -14,8 +14,13 @@
             <h1 class="text-3xl font-bold">AI Blog Generator</h1>
         </div>
         <div>
-            <a href="#" class="text-white hover:underline">Login</a>
-            <a href="#" class="text-white hover:underline">Signup</a>
+            <br/>
+            <a href="/all-blogs" class="text-white text-1xl font-bold hover:underline">AI Blog List</a>
+        </div>
+        <div>
+            <a href="#" class="text-white text-1xl font-bold hover:underline">Welcome {{user.username}}</a>
+            <br />
+            <a href="logout" class="text-white hover:underline">Logout</a>
         </div>
     </nav>
 
@@ -25,13 +30,13 @@
             <section>
                 <h2 class="text-xl mb-4 font-semibold">Blog Post Details</h2>
                 <div class="border border-gray-300 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold">Blog Post Title</h3>
-                    <p class="text-gray-700">This is the blog content</p>
+                    <h3 class="text-lg font-semibold">{{blog_article_details.youtube_title}}</h3>
+                    <p class="text-gray-700">{{blog_article_details.generated_content}}</p>
                     <hr class="my-4 bolder-gray-300">
                     <h4 class="text-lg font-semibold">Youtube Title</h4>
-                    <p class="text-gray-700">Title of the associated youtube video</p>
+                    <p class="text-gray-700">{{blog_article_details.youtube_title}}</p>
                     <h4 class="text-lg font-semibold mt-4">Youtube link</h4>
-                    <a href="#" class="text-blue-600 hover:underline">https://www.youtube.com</a>
+                    <a href="{{blog_article_details.youtube_link}}" class="text-blue-600 hover:underline">{{blog_article_details.youtube_link}}</a>
                 </div>
         </div>
     </div>

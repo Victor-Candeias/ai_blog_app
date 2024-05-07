@@ -14,7 +14,13 @@
             <h1 class="text-3xl font-bold">Ai Blog Generator</h1>
         </div>
         <div>
-            <a href="#" class="text-white hover:underline">Logout</a>
+            <br/>
+            <a href="/" class="text-white text-1xl font-bold hover:underline">AI Blog Generator</a>
+        </div>
+        <div>
+            <a href="#" class="text-white text-1xl font-bold hover:underline">Welcome {{user.username}}</a>
+            <br />
+            <a href="logout" class="text-white hover:underline">Logout</a>
         </div>
     </nav>
 
@@ -23,17 +29,23 @@
         <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
             <!-- Blog post section -->
             <section>
-                <h2 class="text-xl mb-4 font-semibold">All Blog Posts</h2>
+                <h2 class="text-xl mb-4 font-semibold">
+                    {% if blog_articles.count == 0 %}
+                        No Blog Post Yet
+                    {% else %}
+                        All Blog Posts
+                    {% endif %}
+                </h2>
                 <div class="space-y-4">
-                    <div class="border border-gray-300 p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold">Blog Post Title 1</h3>
-                        <p>This is the content of the blog posts. Lorun ...</p>
-                    </div>
+                    {% for article in blog_articles reversed %}
 
-                    <div class="border border-gray-300 p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold">Blog Post Title 2</h3>
-                        <p>This is the content of the blog posts. Lorun ...</p>
-                    </div>
+                        <a href="blog-details/{{article.id}}">
+                            <div class="border border-gray-300 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold">{{article.youtube_title}}</h3>
+                                <p>{{article.generated_content|truncatechars:80}}</p>
+                            </div>
+                        </a>
+                    {% endfor %}
 
                     <!-- Repete -->
                 </div>
