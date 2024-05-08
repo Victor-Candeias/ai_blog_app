@@ -257,7 +257,7 @@ def user_signup(request):
         password = request.POST['password']
         repeatPassword = request.POST['repeatPassword']
         
-        # validate if the password if the same of the repete password
+        # validate if the password if the same of the repeat password
         if password == repeatPassword:
             try:
                 # get user info to save to the BD
