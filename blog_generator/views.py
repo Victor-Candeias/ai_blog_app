@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
+from django.forms import ValidationError
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -42,8 +43,6 @@ def transcriber_blog(request):
     # logger.debug("transcriber():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
     # logger.debug("transcriber():settings.MEDIA_LOG=" + settings.LOG)
     write_log('transcriber_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('transcriber_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('transcriber_blog()', 'settings.LOG=' + settings.LOG)
                     
     # if the method is POST
     if request.method == 'POST':
@@ -73,20 +72,38 @@ def transcriber_blog(request):
             return JsonResponse({'Error': 'Failed to get transcript'}, status=500)
 
         # save blog article to database
-        new_transcribe_article = TranscribePost.objects.create(
-            user=request.user,
-            youtube_title=title,
-            youtube_link=yt_link,
-            generated_content=transcription,
-        )
-        new_transcribe_article.save()
+        save_transcribe_data(request.user, title, yt_link, transcription)
         
         # return blog article as response
         write_log('transcriber_blog()', 'transcription=' + transcription)
+        
         return JsonResponse({'content': transcription}, status=200)
     else:
         return JsonResponse({'Error': 'Invalid request method'}, status=405)
 
+def save_transcribe_data(user: str | None, title: str | None, yt_link: str | None, transcription: str | None): 
+    # save blog article to database
+    new_transcribe_article = TranscribePost.objects.create(
+        user=user,
+        youtube_title=title,
+        youtube_link=yt_link,
+        generated_content=transcription,
+    )
+    
+    try:
+        # validate data
+        new_transcribe_article.full_clean()
+    except ValidationError:
+        # handle error
+        write_log('save_transcribe_data()', 'ValidationError=' + ValidationError.message)
+        
+        return False
+    else:
+        # save data
+        new_transcribe_article.save()
+        
+        return True
+        
 # ***************************************************************************
 # Doesn't need csrf
 @csrf_exempt
@@ -97,15 +114,13 @@ def generate_blog(request):
     # logger.debug("generate_blog():settings.MEDIA_ROOT=" + settings.MEDIA_ROOT)
     # logger.debug("generate_blog():settings.MEDIA_LOG=" + settings.LOG)
     write_log('generate_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('generate_blog()', 'settings.MEDIA_ROOT=' + settings.MEDIA_ROOT)
-    write_log('generate_blog()', 'settings.LOG=' + settings.LOG)
                     
     # if the method is POST
     if request.method == 'POST':
         yt_link = ''
         
         try:
-            # json vem tipo lista
+            # json tipo lista
             data = json.loads(request.body)
             
             # extraimos da lista o id link que foi dado 
@@ -125,13 +140,7 @@ def generate_blog(request):
             return JsonResponse({'Error': 'Failed to generate blog article'}, status=500)
         
         # save blog article to database
-        new_blog_article = BlogPost.objects.create(
-            user=request.user,
-            youtube_title=title,
-            youtube_link=yt_link,
-            generated_content=blog_content,
-        )
-        new_blog_article.save()
+        save_blog_data(request.user, title, yt_link, blog_content)
         
         # return blog article as response
         write_log('generate_blog()', 'blog_content' + blog_content)
@@ -139,16 +148,40 @@ def generate_blog(request):
     else:
         return JsonResponse({'Error': 'Invalid request method'}, status=405)
 
+def save_blog_data(user: str | None, title: str | None, yt_link: str | None, transcription: str | None): 
+    # save blog article to database
+    new_blog_article = BlogPost.objects.create(
+        user=user,
+        youtube_title=title,
+        youtube_link=yt_link,
+        generated_content=transcription,
+    )
+    
+    try:
+        # validate data
+        new_blog_article.full_clean()
+    except ValidationError:
+        # handle error
+        write_log('save_blog_data()', 'ValidationError=' + ValidationError.messages)
+        return False
+    else:
+        # save data
+        new_blog_article.save()
+        return True
+
+def blog_data_get_last_item_id():
+    return BlogPost.objects.latest('pk')
+
 # ***************************************************************************
 # Get youtube video title
-def yt_title(link):
+def yt_title(link: str | None):
     yt = YouTube(link)
     title = yt.title
     return title
 
 # ***************************************************************************
 # Download youtube video to mp3 format
-def download_audio(link):
+def download_audio(link: str | None):
     yt = YouTube(link)
     video = yt.streams.filter(only_audio=True).first()
     out_file = video.download(output_path=settings.MEDIA_ROOT)
@@ -171,7 +204,7 @@ def download_audio(link):
 
 # ***************************************************************************
 # Transcribe the youtube mp3 file to text
-def get_transcript(link):
+def get_transcript(link: str | None):
     audio_file = download_audio(link)
     
     logger.debug("get_transcript():audio_file=" + audio_file)
@@ -201,7 +234,7 @@ def get_transcript(link):
 
 # ***************************************************************************
 # Generate blog text using OpenAI
-def generate_blog_from_transcription(transcription):
+def generate_blog_from_transcription(transcription: str | None):
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     logger.debug("generate_blog_from_transcription():transcript.text=" + client.api_key)
@@ -233,19 +266,39 @@ def user_login(request):
         username = request.POST['username']
         password = request.POST['password']
         
-        user = authenticate(request, username=username, password=password)
+        result = user_authenticate(request, username, password)
         
-        if user is not None:
-            login(request, user)
+        if result == True:
             # redirect to home page
-            return redirect('/')
-        
+            return redirect('/')      
         else:
             error_message = 'Invalid username or password'
-            return render(request, 'login.html', {'error_message': error_message})   
+            return render(request, 'login.html', {'error_message': error_message}) 
+                  
+        # user = authenticate(request, username=username, password=password)
+        
+        # if user is not None:
+        #     login(request, user)
+        #     # redirect to home page
+        #     return redirect('/')
+        
+        # else:
+        #     error_message = 'Invalid username or password'
+        #     return render(request, 'login.html', {'error_message': error_message})   
         
     return render(request, 'login.html')
 
+def user_authenticate(request, username: str | None, password: str | None):
+    user = authenticate(request, username=username, password=password)
+    
+    if user is not None:
+        login(request, user)
+        
+        return True
+    
+    else:
+        return False    
+    
 # ***************************************************************************
 # User signup method
 def user_signup(request):
@@ -305,7 +358,7 @@ def all_blogs(request):
 # ***************************************************************************
 # Show blog list details
 def blog_details(request, pk):
-    blog_article_details = TranscribePost.objects.get(id=pk)
+    blog_article_details = BlogPost.objects.get(id=pk)
     
     if request.user == blog_article_details.user:
         return render(request,'blog-details.html', {'blog_article_details': blog_article_details})
@@ -324,7 +377,7 @@ def transcribe_details(request, pk):
 
 # ***************************************************************************
 # Log to file method
-def write_log(method, message):
+def write_log(method: str | None, message: str | None):
     now=datetime.datetime.now()
     
     message = method + ';' + message

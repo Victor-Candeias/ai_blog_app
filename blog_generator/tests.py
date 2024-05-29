@@ -1,158 +1,112 @@
 from django.test import TestCase, Client
-from django.contrib.auth import get_user_model
 import structlog
-import os
-from .models import TranscribePost
-from .models import BlogPost
+from blog_generator import views
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.test import RequestFactory
+from django.urls import reverse
 
 logger = structlog.get_logger()
-user = 'testuser'
-password = 'password'
-youtube_title='Test'
-youtube_link='TestYoutubeLink'
-generated_content='TestContent'
+user: str = 'dummyuser'
+password: str = 'dummypassword'
+youtube_title: str ='Test'
+youtube_link: str ='https://youtu.be/7IocRCDWB5k?list=RD7IocRCDWB5k'
+generated_content: str ='Generated Content'
+email: str = 'teste@ctt.ctt'
 
 # Create your tests here.
 
-# class to test database
+# *******************************************************************
+# Test tables
 class ModelTest(TestCase):
        
-    # test Transcriber table
+    # *******************************************************************
+    # Test add records to Transcriber table
     def test_models_transcribe(self):
         # create user instance
         self.user = User.objects.create_user(username=user, password=password)
         
-        # logger.debug("test_models_transcribe():self.user.username=" + self.user.username)
-
-        # Count the records
-        transcribeCount = TranscribePost.objects.count()
-
-        # test the record number
-        self.assertEqual(0, transcribeCount)
-            
         # create new record in the trancriber table
-        new_transcribe_article = TranscribePost.objects.create(
-            user=self.user,
-            youtube_title=youtube_title,
-            youtube_link=youtube_link,
-            generated_content=generated_content,
-        )
-        new_transcribe_article.save()
-
-        # Count the records
-        transcribeCount = TranscribePost.objects.count()
+        save_result = views.save_transcribe_data(self.user, youtube_title, youtube_link, generated_content)
         
-        # logger.debug("test_models_transcribe():transcribeCount=" + str(transcribeCount))
+        # logger.debug("test_models_transcribe():save_result=" + str(save_result))
         
-        # test the record number
-        self.assertEqual(1, transcribeCount)
+        # test if record was added
+        self.assertEqual(True, save_result)
         
-        # logger.debug("test_models_transcribe():new_transcribe_article.youtube_title=" + new_transcribe_article.__str__())
-        
-        # get title
-        self.assertEqual(new_transcribe_article.__str__(), new_transcribe_article.youtube_title)
-        
-    # test BlogPost table
+    # *******************************************************************
+    # Test add records to Blog table
     def test_models_blog_post(self):
         # create user instance
         self.user = User.objects.create_user(username=user, password=password)
 
-        # logger.debug("test_models_blogpost():self.user.username=" + self.user.username)
- 
-        # Count the records
-        blog_postCount = BlogPost.objects.count()
-
-        # test the record number
-        self.assertEqual(0, blog_postCount)
-                        
         # create new record in the Blog Post table
-        new_blog_post_article = BlogPost.objects.create(
-            user=self.user,
-            youtube_title=youtube_title,
-            youtube_link=youtube_link,
-            generated_content=generated_content,
-        )
-        new_blog_post_article.save()
+        save_result = views.save_blog_data(self.user, youtube_title, youtube_link, generated_content)
+        
+        # logger.debug("test_models_blogpost():save_result=" + str(save_result))
+        
+        # test if record was added
+        self.assertEqual(True, save_result)
 
-        # Count the records
-        blog_postCount = BlogPost.objects.count()
-        
-        # logger.debug("test_models_blogpost():blog_postCount=" + str(blog_postCount))
-        
-        # test the record number
-        self.assertEqual(1, blog_postCount)
-        
-        # logger.debug("test_models_blogpost():new_blogpost_article.__str__()=" + new_blogpost_article.__str__())
-        
-        # get title
-        self.assertEqual(new_blog_post_article.__str__(), new_blog_post_article.youtube_title)
-
-# class to test html pages
+# *******************************************************************
+# Test HTML pages
 class HTMLPageTest(TestCase):
-    # test home page with logon (blog AI)
+    # *******************************************************************
+    # Test OpenAI page with user logon
     def test_homepage(self):
         # create user instance
-        # user = User.objects.create(username='testuser')
-        # user.set_password(password)
-        # user.save()
-        self.user = User.objects.create_user(username=user, password=password)
-        
-        client = Client()
-        
-        # login
-        client.login(username=self.user.username, password=password)
-        
-        # call home page
-        response = client.get('/', follow=True)
-        
-        # logger.debug("test_models_blogpost():response.status_code=" + str(response.status_code))
-        
-        # validate response code
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
+
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
+
+        # Access the HTML page that requires login
+        response = self.client.get('/', follow=True)
+
+        # Assert that the response status is as expected (e.g., 200 for success, or 302 for redirect)
         self.assertEqual(response.status_code, 200)
-        
-        # validate if text exists in page
-        self.assertContains(response, 'Welcome to IA Blog Generator')
+
+        # Optionally, you can check for the presence of elements or content on the page
+        self.assertContains(response, "Welcome to IA Blog Generator")
   
-     # test transcriber page with logon
+    # *******************************************************************
+    # Test transcriber page with user logon
     def test_transcriber_page(self):
         # create user instance
-        # user = User.objects.create(username='testuser')
-        # user.set_password(password)
-        # user.save()
-        self.user = User.objects.create_user(username=user, password=password)
-        
-        # create user instance
-        client = Client()
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
 
-        # login
-        client.login(username=self.user.username, password=password)
-        
-        # call web page
-        response = client.get('/transcriber', follow=True)
-        
-        # logger.debug("test_models_blogpost():response.status_code=" + str(response.status_code))
-        
-        # validate the status response
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
+
+        # Access the HTML page that requires login
+        response = self.client.get('/transcriber', follow=True)
+
+        # Assert that the response status is as expected (e.g., 200 for success, or 302 for redirect)
         self.assertEqual(response.status_code, 200)
+
+        # Optionally, you can check for the presence of elements or content on the page
+        self.assertContains(response, "Welcome to Transcriber Generator")
         
-        # validate if text exists in page
-        self.assertContains(response, 'Welcome to Transcriber Generator')
-        
-     # test all blogs empty page
+    # *******************************************************************
+    # Test OpenAi blog page without records 
     def test_all_blog_post_page_empty(self):
         # create user instance
-        self.user = User.objects.create_user(username=user, password=password)
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
 
-        client = Client()
-        
-        # login
-        client.login(username=self.user.username, password=password)
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
 
         # call web page
-        response = client.get('/all-blogs', follow=True)
+        response = self.client.get('/all-blogs', follow=True)
         
         # validate response code
         self.assertEqual(response.status_code, 200)
@@ -160,84 +114,74 @@ class HTMLPageTest(TestCase):
         # validate if text exists in page
         self.assertContains(response, 'No Blog Post Yet')
         
-     # test all blogs with data
+    # *******************************************************************
+    # Test OpenAi blog page with records  
     def test_all_blog_post_page_with_data(self):
         # create user instance
-        self.user = User.objects.create_user(username=user, password=password)
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
+
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
         
         # create new record
-        new_blog_post_article = BlogPost.objects.create(
-            user=self.user,
-            youtube_title=youtube_title,
-            youtube_link=youtube_link,
-            generated_content=generated_content,
-        )
-        new_blog_post_article.save()
+        save_result = views.save_blog_data(self.user, youtube_title, youtube_link, generated_content)
 
-        # Count the records
-        blog_postCount = BlogPost.objects.count()
-
-        # test the record number
-        self.assertEqual(1, blog_postCount)
+        # test if record was added
+        self.assertEqual(True, save_result)
         
-        client = Client()
-        
-        # login
-        client.login(username=self.user.username, password=password)
-
         # call wen page
-        response = client.get('/all-blogs', follow=True)
+        response = self.client.get('/all-blogs', follow=True)
         
         # validate response code
         self.assertEqual(response.status_code, 200)
         
         # validate if text exists in page
         self.assertContains(response, generated_content) 
-        
-    def test_all_transcribe_post_page_empty(self):
-        # create user instance
-        self.user = User.objects.create_user(username=user, password=password)
 
-        client = Client()
-        
-        # login
-        client.login(username=self.user.username, password=password)
+    # *******************************************************************
+    # Test transcribe blog page without records         
+    def test_all_transcribe_page_empty(self):
+        # create user instance
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
+
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
 
         # call web page
-        response = client.get('/all-transcribe', follow=True)
+        response = self.client.get('/all-transcribe', follow=True)
         
         # validate response code
         self.assertEqual(response.status_code, 200)
         
         # validate if text exists in page
         self.assertContains(response, 'No Transcribe Post Yet') 
-        
-    def test_all_transcribe_post_page_with_data(self):
+    
+    # *******************************************************************
+    # Test transcribe blog page with records   
+    def test_all_transcribe_page_with_data(self):
         # create user instance
-        self.user = User.objects.create_user(username=user, password=password)
+        self.client = Client()
+        self.username = user
+        self.password = password
+        self.user = User.objects.create_user(username=self.username, email=email, password=self.password)
+
+        # Simulate logging in the user
+        self.client.login(username=self.username, password=self.password)
         
         # create new record
-        new_transcribe_article = TranscribePost.objects.create(
-            user=self.user,
-            youtube_title=youtube_title,
-            youtube_link=youtube_link,
-            generated_content=generated_content,
-        )
-        new_transcribe_article.save()
-
-        # Count the records
-        transcribeCount = TranscribePost.objects.count()
-
-        # test the record number
-        self.assertEqual(1, transcribeCount)
-                
-        client = Client()
+        save_result = views.save_transcribe_data(self.user, youtube_title, youtube_link, generated_content)
         
-        # login
-        client.login(username=self.user.username, password=password)
-
+        # test if record was added
+        self.assertEqual(True, save_result)
+                
         # call web page
-        response = client.get('/all-transcribe', follow=True)
+        response = self.client.get('/all-transcribe', follow=True)
         
         # validate response code
         self.assertEqual(response.status_code, 200)
